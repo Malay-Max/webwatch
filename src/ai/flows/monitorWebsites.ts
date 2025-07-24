@@ -101,12 +101,14 @@ async function processWebsite(website: Website, telegramSettings: { botToken: st
       } else {
         await updateWebsite(website.id, { lastChecked: now, status: 'active' });
       }
-    } else {
+    } else if (!website.lastContent) { // This handles newly added websites
        await updateWebsite(website.id, { 
          lastContent: newContent,
          lastChecked: now,
          status: 'active'
        });
+    } else { // No change, just update the last checked time
+        await updateWebsite(website.id, { lastChecked: now });
     }
   } catch (error) {
     console.error(`Error processing ${website.url}:`, error);
@@ -123,8 +125,8 @@ export const monitorAllWebsites = ai.defineFlow(
   async () => {
     console.log('Starting website monitoring flow...');
     const now = new Date();
-    // Check for websites that are due for a check
-    const websitesToCheck = await getWebsitesToMonitor(new Date(now.getTime() - 5 * 60 * 1000 /* 5 minutes ago */));
+    // Check for all websites, the logic to check if they are due is inside the loop
+    const websitesToCheck = await getWebsitesToMonitor(new Date()); 
     const telegramSettings = await getTelegramSettings();
     
     if (!telegramSettings || !telegramSettings.botToken || !telegramSettings.chatId) {
@@ -140,6 +142,12 @@ export const monitorAllWebsites = ai.defineFlow(
     console.log(`Found ${websitesToCheck.length} websites to monitor.`);
 
     for (const website of websitesToCheck) {
+        // Always process new (inactive) websites
+        if (website.status === 'inactive') {
+            await processWebsite(website, telegramSettings);
+            continue;
+        }
+
         const lastCheckedTime = website.lastChecked.toDate().getTime();
         const intervalMillis = website.checkInterval * 60 * 1000;
         if (now.getTime() - lastCheckedTime >= intervalMillis) {
