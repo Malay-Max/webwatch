@@ -133,12 +133,13 @@ export function Dashboard() {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       if (editingWebsite) {
-        const updatedWebsite: Partial<Website> = {
-          ...values,
+        const updatedWebsiteData: Partial<Website> = {
+          url: values.url,
+          label: values.label,
           checkInterval: parseInt(values.checkInterval, 10),
         };
-        await updateWebsite(editingWebsite.id, updatedWebsite);
-        setWebsites(websites.map(w => w.id === editingWebsite.id ? { ...w, ...updatedWebsite } as Website : w));
+        await updateWebsite(editingWebsite.id, updatedWebsiteData);
+        setWebsites(websites.map(w => w.id === editingWebsite.id ? { ...w, ...updatedWebsiteData } as Website : w));
         toast({ title: "Website Updated", description: "Your website settings have been saved." });
       } else {
         const newWebsiteData = {
@@ -149,7 +150,8 @@ export function Dashboard() {
           status: 'inactive' as const,
         };
         const newId = await addWebsite(newWebsiteData);
-        setWebsites([{ id: newId, ...newWebsiteData }, ...websites]);
+        const newWebsite = { ...newWebsiteData, id: newId } as Website;
+        setWebsites([newWebsite, ...websites]);
         toast({ title: "Website Added", description: "The new website is now being monitored." });
       }
 
