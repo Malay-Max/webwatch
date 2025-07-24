@@ -82,6 +82,15 @@ async function processWebsite(website: Website, telegramSettings: { botToken: st
     const newContent = await response.text();
     const now = Timestamp.now();
 
+    if (website.status === 'inactive' || !website.lastContent) {
+      await updateWebsite(website.id, { 
+        lastContent: newContent,
+        lastChecked: now,
+        status: 'active'
+      });
+      return;
+    }
+
     if (website.lastContent && website.lastContent !== newContent) {
       const { output } = await changeDetectionPrompt({
         url: website.url,
@@ -101,12 +110,6 @@ async function processWebsite(website: Website, telegramSettings: { botToken: st
       } else {
         await updateWebsite(website.id, { lastChecked: now, status: 'active' });
       }
-    } else if (!website.lastContent) { // This handles newly added websites
-       await updateWebsite(website.id, { 
-         lastContent: newContent,
-         lastChecked: now,
-         status: 'active'
-       });
     } else { // No change, just update the last checked time
         await updateWebsite(website.id, { lastChecked: now });
     }
@@ -125,7 +128,6 @@ export const monitorAllWebsites = ai.defineFlow(
   async () => {
     console.log('Starting website monitoring flow...');
     const now = new Date();
-    // Check for all websites, the logic to check if they are due is inside the loop
     const websitesToCheck = await getWebsitesToMonitor(new Date()); 
     const telegramSettings = await getTelegramSettings();
     
@@ -142,7 +144,6 @@ export const monitorAllWebsites = ai.defineFlow(
     console.log(`Found ${websitesToCheck.length} websites to monitor.`);
 
     for (const website of websitesToCheck) {
-        // Always process new (inactive) websites
         if (website.status === 'inactive') {
             await processWebsite(website, telegramSettings);
             continue;
@@ -150,6 +151,7 @@ export const monitorAllWebsites = ai.defineFlow(
 
         const lastCheckedTime = website.lastChecked.toDate().getTime();
         const intervalMillis = website.checkInterval * 60 * 1000;
+        
         if (now.getTime() - lastCheckedTime >= intervalMillis) {
             await processWebsite(website, telegramSettings);
         }
