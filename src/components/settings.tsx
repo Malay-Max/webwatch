@@ -12,17 +12,41 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useEffect, useState } from "react";
+import { getTelegramSettings, saveTelegramSettings } from "@/lib/firestore";
 
 export function Settings() {
   const { toast } = useToast();
+  const [botToken, setBotToken] = useState('');
+  const [chatId, setChatId] = useState('');
+  
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const settings = await getTelegramSettings();
+      if (settings) {
+        setBotToken(settings.botToken);
+        setChatId(settings.chatId);
+      }
+    };
+    fetchSettings();
+  }, []);
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    toast({
-      title: "Settings Saved",
-      description: "Your Telegram configuration has been updated.",
-      className: "bg-accent text-accent-foreground",
-    });
+    try {
+      await saveTelegramSettings({ botToken, chatId });
+      toast({
+        title: "Settings Saved",
+        description: "Your Telegram configuration has been updated.",
+        className: "bg-accent text-accent-foreground",
+      });
+    } catch (error) {
+       toast({
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -42,7 +66,8 @@ export function Settings() {
               id="token"
               type="password"
               placeholder="Enter your bot token"
-              defaultValue="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+              value={botToken}
+              onChange={(e) => setBotToken(e.target.value)}
             />
           </div>
           <div className="space-y-2">
@@ -50,7 +75,8 @@ export function Settings() {
             <Input
               id="chatId"
               placeholder="Enter your chat ID"
-              defaultValue="-1001234567890"
+              value={chatId}
+              onChange={(e) => setChatId(e.target.value)}
             />
           </div>
         </CardContent>

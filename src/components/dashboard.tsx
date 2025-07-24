@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -38,7 +38,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   DropdownMenu,
@@ -65,6 +64,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { addWebsite, deleteWebsite, getWebsites, updateWebsite } from '@/lib/firestore';
+import { Timestamp } from 'firebase/firestore';
 
 
 const formSchema = z.object({
@@ -72,13 +73,6 @@ const formSchema = z.object({
   label: z.string().min(1, { message: 'Label is required.' }),
   checkInterval: z.string(),
 });
-
-const initialWebsites: Website[] = [
-  { id: '1', label: 'Next.js Blog', url: 'https://nextjs.org/blog', status: 'active', lastChecked: new Date(Date.now() - 1000 * 60 * 5), checkInterval: 10 },
-  { id: '2', label: 'Vercel Homepage', url: 'https://vercel.com', status: 'inactive', lastChecked: new Date(Date.now() - 1000 * 60 * 60 * 2), checkInterval: 60 },
-  { id: '3', label: 'Firebase Status', url: 'https://status.firebase.google.com', status: 'error', lastChecked: new Date(Date.now() - 1000 * 60 * 20), checkInterval: 5 },
-  { id: '4', label: 'Stripe Docs', url: 'https://stripe.com/docs', status: 'active', lastChecked: new Date(Date.now() - 1000 * 60 * 15), checkInterval: 30 },
-];
 
 const statusConfig = {
   active: {
@@ -99,10 +93,18 @@ const statusConfig = {
 };
 
 export function Dashboard() {
-  const [websites, setWebsites] = useState<Website[]>(initialWebsites);
+  const [websites, setWebsites] = useState<Website[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingWebsite, setEditingWebsite] = useState<Website | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchWebsites = async () => {
+      const websitesFromDb = await getWebsites();
+      setWebsites(websitesFromDb);
+    };
+    fetchWebsites();
+  }, []);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -119,7 +121,8 @@ export function Dashboard() {
     setIsDialogOpen(true);
   };
   
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
+    await deleteWebsite(id);
     setWebsites(websites.filter((w) => w.id !== id));
     toast({
       title: "Website Removed",
@@ -127,26 +130,39 @@ export function Dashboard() {
     });
   };
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    if (editingWebsite) {
-      setWebsites(websites.map(w => w.id === editingWebsite.id ? { ...editingWebsite, ...values, checkInterval: parseInt(values.checkInterval) } : w));
-      toast({ title: "Website Updated", description: "Your website settings have been saved." });
-    } else {
-      const newWebsite: Website = {
-        id: crypto.randomUUID(),
-        url: values.url,
-        label: values.label,
-        checkInterval: parseInt(values.checkInterval, 10),
-        lastChecked: new Date(),
-        status: 'inactive',
-      };
-      setWebsites([newWebsite, ...websites]);
-      toast({ title: "Website Added", description: "The new website is now being monitored." });
-    }
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    try {
+      if (editingWebsite) {
+        const updatedWebsite: Partial<Website> = {
+          ...values,
+          checkInterval: parseInt(values.checkInterval, 10),
+        };
+        await updateWebsite(editingWebsite.id, updatedWebsite);
+        setWebsites(websites.map(w => w.id === editingWebsite.id ? { ...w, ...updatedWebsite } as Website : w));
+        toast({ title: "Website Updated", description: "Your website settings have been saved." });
+      } else {
+        const newWebsiteData = {
+          url: values.url,
+          label: values.label,
+          checkInterval: parseInt(values.checkInterval, 10),
+          lastChecked: Timestamp.now(),
+          status: 'inactive' as const,
+        };
+        const newId = await addWebsite(newWebsiteData);
+        setWebsites([{ id: newId, ...newWebsiteData }, ...websites]);
+        toast({ title: "Website Added", description: "The new website is now being monitored." });
+      }
 
-    setIsDialogOpen(false);
-    setEditingWebsite(null);
-    form.reset();
+      setIsDialogOpen(false);
+      setEditingWebsite(null);
+      form.reset();
+    } catch (error) {
+       toast({
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
   
   const handleOpenChange = (open: boolean) => {
@@ -200,7 +216,7 @@ export function Dashboard() {
                     </TableCell>
                     <TableCell className="hidden md:table-cell">{website.checkInterval} mins</TableCell>
                     <TableCell className="hidden md:table-cell">
-                      {formatDistanceToNow(website.lastChecked, { addSuffix: true })}
+                      {website.lastChecked && formatDistanceToNow(website.lastChecked.toDate(), { addSuffix: true })}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
