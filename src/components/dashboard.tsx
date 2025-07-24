@@ -124,7 +124,7 @@ export function Dashboard() {
   const handleDelete = async (id: string) => {
     try {
       await deleteWebsite(id);
-      setWebsites(websites.filter((w) => w.id !== id));
+      setWebsites((prevWebsites) => prevWebsites.filter((w) => w.id !== id));
       toast({
         title: "Website Removed",
         description: "The website has been removed from monitoring.",
@@ -150,15 +150,19 @@ export function Dashboard() {
         setWebsites(websites.map(w => w.id === editingWebsite.id ? { ...w, ...updatedWebsiteData } as Website : w));
         toast({ title: "Website Updated", description: "Your website settings have been saved." });
       } else {
-        const newWebsiteData: Omit<Website, 'id'> = {
+        const newWebsiteData: Omit<Website, 'id' | 'status' | 'lastChecked'> = {
           url: values.url,
           label: values.label,
           checkInterval: parseInt(values.checkInterval, 10),
+        };
+        const fullWebsiteData = {
+          ...newWebsiteData,
           lastChecked: Timestamp.now(),
           status: 'inactive' as const,
-        };
-        const newId = await addWebsite(newWebsiteData);
-        const newWebsite = { ...newWebsiteData, id: newId };
+        }
+        const newId = await addWebsite(fullWebsiteData);
+        const newWebsite = { ...fullWebsiteData, id: newId };
+
         setWebsites(prevWebsites => [newWebsite, ...prevWebsites]);
         toast({ title: "Website Added", description: "The new website is now being monitored." });
       }
