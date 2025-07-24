@@ -27,12 +27,14 @@ const changeDetectionPrompt = ai.definePrompt({
   },
   output: { schema: ChangeDetectionSchema },
   prompt: `
-You are a website monitoring agent. Your task is to compare two versions of a website's HTML content and determine if there have been significant changes.
+You are an expert at monitoring university and college noticeboards. Your task is to find the title of any new notice or announcement.
 
-- Ignore minor changes like timestamps, ads, or dynamic content that changes on every load.
-- Focus on substantive changes to the main content, such as new articles, updated text, or significant layout modifications.
+- Compare the old and new HTML content to identify newly added notices.
+- If a new notice is found, extract its exact title.
+- If there are multiple new notices, list each title on a new line.
+- If no new notices are found, simply report that no change was detected.
 
-Analyze the old and new content for the website at {{url}} and provide a summary of the changes.
+Analyze the old and new content for the website at {{url}}.
 
 Old Content (first 5000 characters):
 \`\`\`html
@@ -88,7 +90,7 @@ async function processWebsite(website: Website, telegramSettings: { botToken: st
       });
 
       if (output?.changeDetected && output.summary) {
-        const message = `*Change Detected on ${website.label}*\n\n${output.summary}\n\n[View Website](${website.url})`;
+        const message = `*New Notice on ${website.label}*\n\n${output.summary}\n\n[View Website](${website.url})`;
         await sendTelegramNotification(telegramSettings.botToken, telegramSettings.chatId, message);
         await updateWebsite(website.id, {
           lastContent: newContent,
