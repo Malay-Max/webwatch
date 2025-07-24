@@ -150,18 +150,17 @@ export function Dashboard() {
         setWebsites(websites.map(w => w.id === editingWebsite.id ? { ...w, ...updatedWebsiteData } as Website : w));
         toast({ title: "Website Updated", description: "Your website settings have been saved." });
       } else {
-        const newWebsiteData: Omit<Website, 'id' | 'status' | 'lastChecked'> = {
+        const newWebsiteData: Omit<Website, 'id'> = {
           url: values.url,
           label: values.label,
           checkInterval: parseInt(values.checkInterval, 10),
-        };
-        const fullWebsiteData = {
-          ...newWebsiteData,
-          lastChecked: Timestamp.now(),
+          lastChecked: Timestamp.fromMillis(0),
+          lastUpdated: Timestamp.fromMillis(0),
           status: 'inactive' as const,
-        }
-        const newId = await addWebsite(fullWebsiteData);
-        const newWebsite = { ...fullWebsiteData, id: newId };
+          lastContent: '',
+        };
+        const newId = await addWebsite(newWebsiteData);
+        const newWebsite = { ...newWebsiteData, id: newId };
 
         setWebsites(prevWebsites => [newWebsite, ...prevWebsites]);
         toast({ title: "Website Added", description: "The new website is now being monitored." });
@@ -223,14 +222,14 @@ export function Dashboard() {
                       <div className="text-sm text-muted-foreground">{website.url}</div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={cn("flex items-center gap-2 w-fit", statusConfig[website.status].className)}>
-                        {statusConfig[website.status].icon}
-                        <span>{statusConfig[website.status].label}</span>
+                      <Badge variant="outline" className={cn("flex items-center gap-2 w-fit", statusConfig[website.status]?.className)}>
+                        {statusConfig[website.status]?.icon}
+                        <span>{statusConfig[website.status]?.label}</span>
                       </Badge>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">{website.checkInterval} mins</TableCell>
                     <TableCell className="hidden md:table-cell">
-                      {website.lastChecked && formatDistanceToNow(website.lastChecked.toDate(), { addSuffix: true })}
+                      {website.lastChecked && website.lastChecked.toMillis() > 0 ? formatDistanceToNow(website.lastChecked.toDate(), { addSuffix: true }) : 'Never'}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>

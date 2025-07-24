@@ -7,6 +7,8 @@ export type Website = {
   checkInterval: number; // in minutes
   lastChecked: Timestamp;
   status: 'active' | 'inactive' | 'error';
+  lastContent: string;
+  lastUpdated: Timestamp;
 };
 
 export type TelegramSettings = {

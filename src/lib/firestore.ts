@@ -1,4 +1,4 @@
-import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, getDoc, setDoc } from "firebase/firestore";
+import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, getDoc, setDoc, query, where } from "firebase/firestore";
 import { db } from "./firebase";
 import { Website, TelegramSettings } from "./types";
 
@@ -10,6 +10,12 @@ export const getWebsites = async (): Promise<Website[]> => {
     const querySnapshot = await getDocs(collection(db, WEBSITES_COLLECTION));
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Website));
 };
+
+export const getWebsitesToMonitor = async (now: Date): Promise<Website[]> => {
+    const q = query(collection(db, WEBSITES_COLLECTION), where('lastChecked', '<=', now));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Website));
+}
 
 export const addWebsite = async (website: Omit<Website, 'id'>) => {
     const docRef = await addDoc(collection(db, WEBSITES_COLLECTION), website);
