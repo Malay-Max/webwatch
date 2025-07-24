@@ -122,12 +122,20 @@ export function Dashboard() {
   };
   
   const handleDelete = async (id: string) => {
-    await deleteWebsite(id);
-    setWebsites(websites.filter((w) => w.id !== id));
-    toast({
-      title: "Website Removed",
-      description: "The website has been removed from monitoring.",
-    });
+    try {
+      await deleteWebsite(id);
+      setWebsites(websites.filter((w) => w.id !== id));
+      toast({
+        title: "Website Removed",
+        description: "The website has been removed from monitoring.",
+      });
+    } catch (error) {
+       toast({
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
@@ -142,7 +150,7 @@ export function Dashboard() {
         setWebsites(websites.map(w => w.id === editingWebsite.id ? { ...w, ...updatedWebsiteData } as Website : w));
         toast({ title: "Website Updated", description: "Your website settings have been saved." });
       } else {
-        const newWebsiteData = {
+        const newWebsiteData: Omit<Website, 'id'> = {
           url: values.url,
           label: values.label,
           checkInterval: parseInt(values.checkInterval, 10),
@@ -150,8 +158,8 @@ export function Dashboard() {
           status: 'inactive' as const,
         };
         const newId = await addWebsite(newWebsiteData);
-        const newWebsite = { ...newWebsiteData, id: newId } as Website;
-        setWebsites([newWebsite, ...websites]);
+        const newWebsite = { ...newWebsiteData, id: newId };
+        setWebsites(prevWebsites => [newWebsite, ...prevWebsites]);
         toast({ title: "Website Added", description: "The new website is now being monitored." });
       }
 
@@ -183,7 +191,7 @@ export function Dashboard() {
             <CardTitle>Monitored Websites</CardTitle>
             <CardDescription>A list of your websites being monitored for changes.</CardDescription>
           </div>
-          <Button onClick={() => setIsDialogOpen(true)}>
+          <Button onClick={() => handleOpenChange(true)}>
             <PlusCircle className="mr-2 h-4 w-4" /> Add Website
           </Button>
         </div>
