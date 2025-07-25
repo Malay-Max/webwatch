@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Fragment } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -268,9 +268,8 @@ export function Dashboard() {
               <TableBody>
                 {websites.length > 0 ? (
                   websites.map((website) => (
-                    <>
+                    <Fragment key={website.id}>
                       <TableRow 
-                        key={website.id} 
                         onClick={() => handleRowClick(website.id)}
                         className="cursor-pointer"
                       >
@@ -324,7 +323,7 @@ export function Dashboard() {
                           </TableCell>
                         </TableRow>
                       )}
-                    </>
+                    </Fragment>
                   ))
                 ) : (
                   <TableRow>
@@ -427,5 +426,3 @@ export function Dashboard() {
     </>
   );
 }
-
-    
