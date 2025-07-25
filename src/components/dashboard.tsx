@@ -11,6 +11,7 @@ import {
   MoreHorizontal,
   Pencil,
   PlusCircle,
+  RefreshCw,
   Trash2,
   XCircle,
 } from 'lucide-react';
@@ -66,6 +67,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { addWebsite, deleteWebsite, getWebsites, updateWebsite } from '@/lib/firestore';
 import { Timestamp } from 'firebase/firestore';
+import { monitorSingleWebsite } from '@/ai/flows/monitorWebsites';
 
 
 const formSchema = z.object({
@@ -98,12 +100,15 @@ export function Dashboard() {
   const [editingWebsite, setEditingWebsite] = useState<Website | null>(null);
   const { toast } = useToast();
 
+  const fetchWebsites = async () => {
+    const websitesFromDb = await getWebsites();
+    setWebsites(websitesFromDb);
+  };
+  
   useEffect(() => {
-    const fetchWebsites = async () => {
-      const websitesFromDb = await getWebsites();
-      setWebsites(websitesFromDb);
-    };
     fetchWebsites();
+    const interval = setInterval(fetchWebsites, 30000); // Refresh every 30 seconds
+    return () => clearInterval(interval);
   }, []);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -134,6 +139,36 @@ export function Dashboard() {
         title: "Error",
         description: "Something went wrong. Please try again.",
         variant: "destructive"
+      });
+    }
+  };
+
+  const handleCheckNow = async (website: Website) => {
+    toast({
+      title: 'Checking Website...',
+      description: `Manually checking ${website.label} for changes.`,
+    });
+    try {
+      const result = await monitorSingleWebsite(website.id);
+      await fetchWebsites(); // Refresh the list to show updated status/time
+      if (result.changed) {
+        toast({
+          title: "New Notice Found!",
+          description: result.summary,
+          className: "bg-accent text-accent-foreground",
+        });
+      } else {
+        toast({
+          title: "No Changes Detected",
+          description: `Finished checking ${website.label}.`,
+        });
+      }
+    } catch (error) {
+      await fetchWebsites(); // Refresh even on error
+      toast({
+        title: 'Error Checking Website',
+        description: error instanceof Error ? error.message : "An unknown error occurred.",
+        variant: 'destructive',
       });
     }
   };
@@ -240,6 +275,9 @@ export function Dashboard() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleCheckNow(website)}>
+                            <RefreshCw className="mr-2 h-4 w-4" /> Check Now
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleEdit(website)}>
                             <Pencil className="mr-2 h-4 w-4" /> Edit
                           </DropdownMenuItem>

@@ -11,6 +11,17 @@ export const getWebsites = async (): Promise<Website[]> => {
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Website));
 };
 
+export const getWebsite = async (id: string): Promise<Website | null> => {
+    const docRef = doc(db, WEBSITES_COLLECTION, id);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() } as Website;
+    } else {
+        return null;
+    }
+}
+
 export const getWebsitesToMonitor = async (now: Date): Promise<Website[]> => {
     // This will fetch all websites, and the flow will decide which ones to process.
     // This is simpler and ensures new/inactive websites are picked up.

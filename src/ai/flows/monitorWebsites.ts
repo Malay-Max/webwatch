@@ -6,7 +6,7 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { getTelegramSettings, getWebsitesToMonitor, updateWebsite } from '@/lib/firestore';
+import { getTelegramSettings, getWebsite, getWebsitesToMonitor, updateWebsite } from '@/lib/firestore';
 import { Website } from '@/lib/types';
 import { Timestamp } from 'firebase/firestore';
 import { z } from 'zod';
@@ -71,7 +71,7 @@ async function sendTelegramNotification(botToken: string, chatId: string, text: 
   }
 }
 
-async function processWebsite(website: Website, telegramSettings: { botToken: string, chatId: string }): Promise<void> {
+async function processWebsite(website: Website, telegramSettings: { botToken: string, chatId: string }): Promise<{ changed: boolean, summary?: string }> {
   try {
     const response = await fetch(website.url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)' }
@@ -88,7 +88,7 @@ async function processWebsite(website: Website, telegramSettings: { botToken: st
         lastChecked: now,
         status: 'active'
       });
-      return;
+      return { changed: false, summary: "Website activated. Monitoring will start on the next check." };
     }
 
     if (website.lastContent && website.lastContent !== newContent) {
@@ -107,15 +107,19 @@ async function processWebsite(website: Website, telegramSettings: { botToken: st
           lastUpdated: now,
           status: 'active',
         });
+        return { changed: true, summary: output.summary };
       } else {
         await updateWebsite(website.id, { lastChecked: now, status: 'active' });
+        return { changed: false, summary: 'No changes detected.' };
       }
     } else { // No change, just update the last checked time
         await updateWebsite(website.id, { lastChecked: now });
+        return { changed: false, summary: 'No changes detected.' };
     }
   } catch (error) {
     console.error(`Error processing ${website.url}:`, error);
     await updateWebsite(website.id, { status: 'error', lastChecked: Timestamp.now() });
+    throw error;
   }
 }
 
@@ -159,3 +163,17 @@ export const monitorAllWebsites = ai.defineFlow(
     console.log('Website monitoring flow finished.');
   }
 );
+
+
+export async function monitorSingleWebsite(websiteId: string): Promise<{ changed: boolean, summary?: string }> {
+    const website = await getWebsite(websiteId);
+    if (!website) {
+        throw new Error('Website not found');
+    }
+    const telegramSettings = await getTelegramSettings();
+    if (!telegramSettings || !telegramSettings.botToken || !telegramSettings.chatId) {
+        throw new Error("Telegram settings are not configured.");
+    }
+    
+    return await processWebsite(website, telegramSettings);
+}
