@@ -1,3 +1,4 @@
+
 // src/app/api/monitor/route.ts
 import { monitorAllWebsites } from '@/ai/flows/monitorWebsites';
 import { getTelegramSettings } from '@/lib/firestore';
@@ -40,12 +41,12 @@ export async function POST(request: Request) {
       await sendTelegramNotification(telegramSettings.botToken, telegramSettings.chatId, '🤖 Cron job started. Checking websites for updates...');
     }
 
-    // Do not await this, let it run in the background
-    monitorAllWebsites();
+    // Await the monitoring flow to ensure it completes
+    await monitorAllWebsites();
     
-    return NextResponse.json({ success: true, message: 'Monitoring started.' });
+    return NextResponse.json({ success: true, message: 'Monitoring completed.' });
   } catch (error) {
-    console.error('Error starting monitoring flow:', error);
-    return NextResponse.json({ success: false, message: 'Failed to start monitoring.' }, { status: 500 });
+    console.error('Error during monitoring flow:', error);
+    return NextResponse.json({ success: false, message: 'Monitoring failed.' }, { status: 500 });
   }
 }
