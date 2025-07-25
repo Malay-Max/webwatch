@@ -28,6 +28,11 @@ const InitialNoticeSchema = z.object({
     summary: z.string().optional().describe('The title of the most recent notice.'),
 });
 
+// Define a maximum character limit for content stored in Firestore.
+// Firestore's limit is ~1MB (1,048,576 bytes). We'll set it lower to be safe.
+const MAX_CONTENT_LENGTH = 500000;
+
+
 const changeDetectionPrompt = ai.definePrompt({
   name: 'changeDetectionPrompt',
   input: {
@@ -137,14 +142,15 @@ async function processWebsite(website: Website, telegramSettings: TelegramSettin
       throw new Error(`Failed to fetch ${website.url}: ${response.status} ${response.statusText}`);
     }
     const rawHtml = await response.text();
-    const newContent = extractContentBySelector(rawHtml, website.selector || '');
+    const extractedContent = extractContentBySelector(rawHtml, website.selector || '');
+    const newContent = extractedContent.substring(0, MAX_CONTENT_LENGTH);
     const now = Timestamp.now();
 
     if (website.status === 'inactive' || !website.lastContent) {
       // First time checking this website
       const { output } = await initialNoticePrompt({
         url: website.url,
-        content: newContent.substring(0, 8000), // Increased substring limit
+        content: newContent.substring(0, 8000), 
       });
       
       const summary = output?.noticeFound ? `Initial notice found: ${output.summary}` : "Website activated. Monitoring will start on the next check.";
