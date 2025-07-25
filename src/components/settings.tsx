@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useEffect, useState } from "react";
 import { getTelegramSettings, saveTelegramSettings } from "@/lib/firestore";
+import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
+import { Terminal } from "lucide-react";
 
 export function Settings() {
   const { toast } = useToast();
@@ -56,7 +58,6 @@ export function Settings() {
           <CardTitle>Telegram Bot Configuration</CardTitle>
           <CardDescription>
             Enter your Telegram bot token and chat ID to receive notifications.
-            You can get these from BotFather on Telegram.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -65,7 +66,7 @@ export function Settings() {
             <Input
               id="token"
               type="password"
-              placeholder="Enter your bot token"
+              placeholder="Get this from @BotFather on Telegram"
               value={botToken}
               onChange={(e) => setBotToken(e.target.value)}
             />
@@ -74,11 +75,22 @@ export function Settings() {
             <Label htmlFor="chatId">Chat ID</Label>
             <Input
               id="chatId"
-              placeholder="Enter your chat ID"
+              placeholder="Your personal or group chat ID"
               value={chatId}
               onChange={(e) => setChatId(e.target.value)}
             />
           </div>
+           <Alert>
+              <Terminal className="h-4 w-4" />
+              <AlertTitle>How to get your Chat ID?</AlertTitle>
+              <AlertDescription>
+                1. Start a chat with your bot on Telegram.
+                <br/>
+                2. Search for the bot <span className="font-mono bg-muted px-1 py-0.5 rounded-sm">@userinfobot</span> and start it.
+                <br/>
+                3. It will immediately send you your user details, including your <span className="font-mono bg-muted px-1 py-0.5 rounded-sm">Id</span>. This is your Chat ID.
+              </AlertDescription>
+            </Alert>
         </CardContent>
         <CardFooter>
           <Button type="submit">Save Settings</Button>
