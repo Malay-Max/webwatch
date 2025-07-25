@@ -1,9 +1,8 @@
-import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, getDoc, setDoc, query, where, Timestamp } from "firebase/firestore";
+import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, getDoc, query, where, Timestamp } from "firebase/firestore";
 import { db } from "./firebase";
-import { Website, TelegramSettings } from "./types";
+import { Website } from "./types";
 
 const WEBSITES_COLLECTION = 'websites';
-const SETTINGS_DOC = 'telegram_settings';
 
 // Websites
 export const getWebsites = async (): Promise<Website[]> => {
@@ -46,18 +45,9 @@ export const deleteWebsite = async (id: string) => {
 
 
 // Settings
-export const saveTelegramSettings = async (settings: TelegramSettings) => {
-    const docRef = doc(db, 'settings', SETTINGS_DOC);
-    await setDoc(docRef, settings);
-};
-
-export const getTelegramSettings = async (): Promise<TelegramSettings | null> => {
-    const docRef = doc(db, 'settings', SETTINGS_DOC);
-    const docSnap = await getDoc(docRef);
-
-    if (docSnap.exists()) {
-        return docSnap.data() as TelegramSettings;
-    } else {
-        return null;
-    }
+export const getTelegramSettings = async (): Promise<{ botToken: string | undefined, chatId: string | undefined }> => {
+    return {
+        botToken: process.env.TELEGRAM_BOT_TOKEN,
+        chatId: process.env.TELEGRAM_CHAT_ID
+    };
 };

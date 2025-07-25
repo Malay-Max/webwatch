@@ -11,8 +11,3 @@ export type Website = {
   lastUpdated: Timestamp;
   selector?: string; // Optional CSS selector
 };
-
-export type TelegramSettings = {
-  botToken: string;
-  chatId: string;
-};

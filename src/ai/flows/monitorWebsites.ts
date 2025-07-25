@@ -11,6 +11,11 @@ import { Website } from '@/lib/types';
 import { Timestamp } from 'firebase/firestore';
 import { z } from 'zod';
 
+type TelegramSettings = {
+    botToken: string;
+    chatId: string;
+};
+
 const ChangeDetectionSchema = z.object({
   changeDetected: z.boolean().describe('Whether a significant change was detected.'),
   summary: z.string().optional().describe('A summary of the changes if any were detected.'),
@@ -126,7 +131,7 @@ async function sendTelegramNotification(botToken: string, chatId: string, text: 
   }
 }
 
-async function processWebsite(website: Website, telegramSettings: { botToken: string, chatId: string }): Promise<{ changed: boolean, summary?: string }> {
+async function processWebsite(website: Website, telegramSettings: TelegramSettings): Promise<{ changed: boolean, summary?: string }> {
   try {
     const response = await fetch(website.url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)' }
@@ -206,7 +211,7 @@ export const monitorAllWebsites = ai.defineFlow(
     const telegramSettings = await getTelegramSettings();
     
     if (!telegramSettings || !telegramSettings.botToken || !telegramSettings.chatId) {
-        console.error("Telegram settings are not configured. Aborting flow.");
+        console.error("Telegram settings are not configured. Aborting flow. Please check your environment variables.");
         return;
     }
     
@@ -221,7 +226,7 @@ export const monitorAllWebsites = ai.defineFlow(
         // Always process inactive websites to get their initial state
         if (website.status === 'inactive') {
             console.log(`Processing inactive website: ${website.label}`);
-            await processWebsite(website, telegramSettings);
+            await processWebsite(website, telegramSettings as TelegramSettings);
             continue;
         }
 
@@ -231,7 +236,7 @@ export const monitorAllWebsites = ai.defineFlow(
         // Check if the interval has passed
         if (now.getTime() - lastCheckedTime >= intervalMillis) {
             console.log(`Processing website due for check: ${website.label}`);
-            await processWebsite(website, telegramSettings);
+            await processWebsite(website, telegramSettings as TelegramSettings);
         } else {
             // Optional: log sites that are not yet due
             // console.log(`Skipping website (not due yet): ${website.label}`);
@@ -249,8 +254,8 @@ export async function monitorSingleWebsite(websiteId: string): Promise<{ changed
     }
     const telegramSettings = await getTelegramSettings();
     if (!telegramSettings || !telegramSettings.botToken || !telegramSettings.chatId) {
-        throw new Error("Telegram settings are not configured.");
+        throw new Error("Telegram settings are not configured. Please check your environment variables.");
     }
     
-    return await processWebsite(website, telegramSettings);
+    return await processWebsite(website, telegramSettings as TelegramSettings);
 }
