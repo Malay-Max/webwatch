@@ -9,6 +9,8 @@ import { formatDistanceToNow } from 'date-fns';
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   MoreHorizontal,
   Pencil,
   PlusCircle,
@@ -102,6 +104,7 @@ export function Dashboard() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingWebsite, setEditingWebsite] = useState<Website | null>(null);
   const { toast } = useToast();
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
   const fetchWebsites = async () => {
     const websitesFromDb = await getWebsites();
@@ -118,6 +121,10 @@ export function Dashboard() {
     resolver: zodResolver(formSchema),
     defaultValues: { url: '', label: '', checkInterval: '10', selector: '' },
   });
+  
+  const handleRowClick = (id: string) => {
+    setExpandedRow(expandedRow === id ? null : id);
+  }
 
   const handleEdit = (website: Website) => {
     setEditingWebsite(website);
@@ -248,11 +255,11 @@ export function Dashboard() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[50px]"></TableHead>
                   <TableHead>Website</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="hidden lg:table-cell">Interval</TableHead>
                   <TableHead className="hidden md:table-cell">Last Checked</TableHead>
-                  <TableHead className="hidden lg:table-cell">Latest Update</TableHead>
                   <TableHead>
                     <span className="sr-only">Actions</span>
                   </TableHead>
@@ -261,47 +268,63 @@ export function Dashboard() {
               <TableBody>
                 {websites.length > 0 ? (
                   websites.map((website) => (
-                    <TableRow key={website.id}>
-                      <TableCell>
-                        <div className="font-medium">{website.label}</div>
-                        <div className="text-sm text-muted-foreground">{website.url}</div>
-                        {website.selector && <div className="text-xs text-muted-foreground/80 font-mono mt-1">Selector: {website.selector}</div>}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={cn("flex items-center gap-2 w-fit", statusConfig[website.status]?.className)}>
-                          {statusConfig[website.status]?.icon}
-                          <span>{statusConfig[website.status]?.label}</span>
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell">{website.checkInterval} mins</TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        {website.lastChecked && website.lastChecked.toMillis() > 0 ? formatDistanceToNow(website.lastChecked.toDate(), { addSuffix: true }) : 'Never'}
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell text-sm text-muted-foreground truncate max-w-[200px]">
-                        {website.lastChangeSummary || 'No changes yet.'}
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button aria-haspopup="true" size="icon" variant="ghost">
-                              <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">Toggle menu</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleCheckNow(website)}>
-                              <RefreshCw className="mr-2 h-4 w-4" /> Check Now
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEdit(website)}>
-                              <Pencil className="mr-2 h-4 w-4" /> Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDelete(website.id)} className="text-destructive">
-                              <Trash2 className="mr-2 h-4 w-4" /> Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
+                    <>
+                      <TableRow 
+                        key={website.id} 
+                        onClick={() => handleRowClick(website.id)}
+                        className="cursor-pointer"
+                      >
+                         <TableCell className="px-2">
+                           {expandedRow === website.id ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          </TableCell>
+                        <TableCell>
+                          <div className="font-medium">{website.label}</div>
+                          <div className="text-sm text-muted-foreground">{website.url}</div>
+                          {website.selector && <div className="text-xs text-muted-foreground/80 font-mono mt-1">Selector: {website.selector}</div>}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={cn("flex items-center gap-2 w-fit", statusConfig[website.status]?.className)}>
+                            {statusConfig[website.status]?.icon}
+                            <span>{statusConfig[website.status]?.label}</span>
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell">{website.checkInterval} mins</TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {website.lastChecked && website.lastChecked.toMillis() > 0 ? formatDistanceToNow(website.lastChecked.toDate(), { addSuffix: true }) : 'Never'}
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button aria-haspopup="true" size="icon" variant="ghost" onClick={(e) => e.stopPropagation()}>
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">Toggle menu</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleCheckNow(website)}>
+                                <RefreshCw className="mr-2 h-4 w-4" /> Check Now
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleEdit(website)}>
+                                <Pencil className="mr-2 h-4 w-4" /> Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDelete(website.id)} className="text-destructive">
+                                <Trash2 className="mr-2 h-4 w-4" /> Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                      {expandedRow === website.id && (
+                        <TableRow key={`${website.id}-details`}>
+                          <TableCell colSpan={6} className="p-4 bg-muted/50">
+                            <h4 className="font-semibold mb-2">Latest Update:</h4>
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                              {website.lastChangeSummary || 'No changes have been detected yet. The first check will establish a baseline.'}
+                            </p>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </>
                   ))
                 ) : (
                   <TableRow>
@@ -404,3 +427,5 @@ export function Dashboard() {
     </>
   );
 }
+
+    
