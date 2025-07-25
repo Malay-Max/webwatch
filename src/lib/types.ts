@@ -9,6 +9,7 @@ export type Website = {
   status: 'active' | 'inactive' | 'error';
   lastContent: string;
   lastUpdated: Timestamp;
+  selector?: string; // Optional CSS selector
 };
 
 export type TelegramSettings = {

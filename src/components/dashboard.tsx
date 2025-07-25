@@ -49,6 +49,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -74,6 +75,7 @@ const formSchema = z.object({
   url: z.string().url({ message: 'Please enter a valid URL.' }),
   label: z.string().min(1, { message: 'Label is required.' }),
   checkInterval: z.string(),
+  selector: z.string().optional(),
 });
 
 const statusConfig = {
@@ -113,7 +115,7 @@ export function Dashboard() {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { url: '', label: '', checkInterval: '10' },
+    defaultValues: { url: '', label: '', checkInterval: '10', selector: '' },
   });
 
   const handleEdit = (website: Website) => {
@@ -122,6 +124,7 @@ export function Dashboard() {
       url: website.url,
       label: website.label,
       checkInterval: String(website.checkInterval),
+      selector: website.selector || '',
     });
     setIsDialogOpen(true);
   };
@@ -180,6 +183,7 @@ export function Dashboard() {
           url: values.url,
           label: values.label,
           checkInterval: parseInt(values.checkInterval, 10),
+          selector: values.selector || '',
         };
         await updateWebsite(editingWebsite.id, updatedWebsiteData);
         setWebsites(websites.map(w => w.id === editingWebsite.id ? { ...w, ...updatedWebsiteData } as Website : w));
@@ -193,6 +197,7 @@ export function Dashboard() {
           lastUpdated: Timestamp.fromMillis(0),
           status: 'inactive' as const,
           lastContent: '',
+          selector: values.selector || '',
         };
         const newId = await addWebsite(newWebsiteData);
         const newWebsite = { ...newWebsiteData, id: newId };
@@ -255,6 +260,7 @@ export function Dashboard() {
                     <TableCell>
                       <div className="font-medium">{website.label}</div>
                       <div className="text-sm text-muted-foreground">{website.url}</div>
+                      {website.selector && <div className="text-xs text-muted-foreground/80 font-mono mt-1">Selector: {website.selector}</div>}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={cn("flex items-center gap-2 w-fit", statusConfig[website.status]?.className)}>
@@ -318,7 +324,7 @@ export function Dashboard() {
                   <FormItem>
                     <FormLabel>Label</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. My Personal Blog" {...field} />
+                      <Input placeholder="e.g. My University Notices" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -333,6 +339,22 @@ export function Dashboard() {
                     <FormControl>
                       <Input placeholder="https://example.com" {...field} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="selector"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>CSS Selector (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. #notice-board or .main-content" {...field} />
+                    </FormControl>
+                     <FormDescription>
+                      Specify a tag like `main` or a CSS selector like `#content` to monitor only a specific part of the page.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

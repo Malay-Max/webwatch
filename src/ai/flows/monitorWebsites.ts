@@ -41,12 +41,12 @@ You are an expert at monitoring university and college noticeboards. Your task i
 
 Analyze the old and new content for the website at {{url}}.
 
-Old Content (first 5000 characters):
+Old Content:
 \`\`\`html
 {{{oldContent}}}
 \`\`\`
 
-New Content (first 5000 characters):
+New Content:
 \`\`\`html
 {{{newContent}}}
 \`\`\`
@@ -71,12 +71,37 @@ You are an expert at monitoring university and college noticeboards. Your task i
 
 Analyze the content for the website at {{url}}.
 
-Content (first 5000 characters):
+Content:
 \`\`\`html
 {{{content}}}
 \`\`\`
 `,
 });
+
+function extractContentBySelector(html: string, selector: string): string {
+    // Basic regex for a specific tag or a class/id.
+    // This is a simplified approach and won't handle complex nested structures
+    // or advanced CSS selectors as a full DOM parser would.
+    const sanitizedSelector = selector.trim();
+    let regex;
+
+    if (sanitizedSelector.startsWith('.')) {
+        // Class selector
+        const className = sanitizedSelector.substring(1);
+        regex = new RegExp(`<[^>]+class="[^"]*${className}[^"]*"[^>]*>([\\s\\S]*?)<\\/[^>]+>`, 'i');
+    } else if (sanitizedSelector.startsWith('#')) {
+        // ID selector
+        const id = sanitizedSelector.substring(1);
+        regex = new RegExp(`<[^>]+id="${id}"[^>]*>([\\s\\S]*?)<\\/[^>]+>`, 'i');
+    } else {
+        // Tag selector
+        regex = new RegExp(`<${sanitizedSelector}[^>]*>([\\s\\S]*?)<\\/${sanitizedSelector}>`, 'i');
+    }
+
+    const match = html.match(regex);
+    return match ? match[1] || match[0] : html; // Return content or the full tag, fallback to full html
+}
+
 
 async function sendTelegramNotification(botToken: string, chatId: string, text: string) {
   const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
@@ -109,7 +134,8 @@ async function processWebsite(website: Website, telegramSettings: { botToken: st
     if (!response.ok) {
       throw new Error(`Failed to fetch ${website.url}: ${response.statusText}`);
     }
-    const newContent = await response.text();
+    const rawHtml = await response.text();
+    const newContent = website.selector ? extractContentBySelector(rawHtml, website.selector) : rawHtml;
     const now = Timestamp.now();
 
     if (website.status === 'inactive' || !website.lastContent) {
@@ -194,6 +220,7 @@ export const monitorAllWebsites = ai.defineFlow(
     for (const website of websitesToCheck) {
         // Always process inactive websites to get their initial state
         if (website.status === 'inactive') {
+            console.log(`Processing inactive website: ${website.label}`);
             await processWebsite(website, telegramSettings);
             continue;
         }
@@ -203,7 +230,11 @@ export const monitorAllWebsites = ai.defineFlow(
         
         // Check if the interval has passed
         if (now.getTime() - lastCheckedTime >= intervalMillis) {
+            console.log(`Processing website due for check: ${website.label}`);
             await processWebsite(website, telegramSettings);
+        } else {
+            // Optional: log sites that are not yet due
+            // console.log(`Skipping website (not due yet): ${website.label}`);
         }
     }
     console.log('Website monitoring flow finished.');
