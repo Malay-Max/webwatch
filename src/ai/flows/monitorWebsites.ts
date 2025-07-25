@@ -151,19 +151,22 @@ async function processWebsite(website: Website, telegramSettings: TelegramSettin
       });
       
       const summary = output?.noticeFound ? `Initial notice found: ${output.summary}` : "Website activated. Monitoring will start on the next check.";
-
-      if (output?.noticeFound && output.summary) {
-        const message = `*Latest Notice on ${website.label}*\n\n${output.summary}\n\n[View Website](${website.url})`;
-        await sendTelegramNotification(telegramSettings.botToken, telegramSettings.chatId, message);
-      }
-      
-      await updateWebsite(website.id, { 
+      const updatePayload: Partial<Website> = { 
         lastContent: newContent,
         lastChecked: now,
         status: 'active',
         lastUpdated: now,
-        lastChangeSummary: output?.summary || 'No changes detected on first check.',
-      });
+      };
+
+      if (output?.noticeFound && output.summary) {
+        updatePayload.lastChangeSummary = output.summary;
+        const message = `*Latest Notice on ${website.label}*\n\n${output.summary}\n\n[View Website](${website.url})`;
+        await sendTelegramNotification(telegramSettings.botToken, telegramSettings.chatId, message);
+      } else {
+        updatePayload.lastChangeSummary = 'No notice found on first check.';
+      }
+      
+      await updateWebsite(website.id, updatePayload);
 
       return { changed: output?.noticeFound || false, summary: summary };
     }
