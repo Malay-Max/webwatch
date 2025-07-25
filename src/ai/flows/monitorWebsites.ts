@@ -16,6 +16,11 @@ const ChangeDetectionSchema = z.object({
   summary: z.string().optional().describe('A summary of the changes if any were detected.'),
 });
 
+const InitialNoticeSchema = z.object({
+    noticeFound: z.boolean().describe('Whether a notice was found.'),
+    summary: z.string().optional().describe('The title of the most recent notice.'),
+});
+
 const changeDetectionPrompt = ai.definePrompt({
   name: 'changeDetectionPrompt',
   input: {
@@ -44,6 +49,31 @@ Old Content (first 5000 characters):
 New Content (first 5000 characters):
 \`\`\`html
 {{{newContent}}}
+\`\`\`
+`,
+});
+
+const initialNoticePrompt = ai.definePrompt({
+  name: 'initialNoticePrompt',
+  input: {
+    schema: z.object({
+      url: z.string(),
+      content: z.string(),
+    }),
+  },
+  output: { schema: InitialNoticeSchema },
+  prompt: `
+You are an expert at monitoring university and college noticeboards. Your task is to find the title of the most recent notice or announcement from the provided HTML content.
+
+- Analyze the HTML to find the latest notice.
+- Extract its exact title.
+- If no notice is found, simply report that no notice was found.
+
+Analyze the content for the website at {{url}}.
+
+Content (first 5000 characters):
+\`\`\`html
+{{{content}}}
 \`\`\`
 `,
 });
@@ -83,12 +113,26 @@ async function processWebsite(website: Website, telegramSettings: { botToken: st
     const now = Timestamp.now();
 
     if (website.status === 'inactive' || !website.lastContent) {
+      // First time checking this website
+      const { output } = await initialNoticePrompt({
+        url: website.url,
+        content: newContent.substring(0, 5000),
+      });
+
+      if (output?.noticeFound && output.summary) {
+        const message = `*Latest Notice on ${website.label}*\n\n${output.summary}\n\n[View Website](${website.url})`;
+        await sendTelegramNotification(telegramSettings.botToken, telegramSettings.chatId, message);
+      }
+      
       await updateWebsite(website.id, { 
         lastContent: newContent,
         lastChecked: now,
-        status: 'active'
+        status: 'active',
+        lastUpdated: now,
       });
-      return { changed: false, summary: "Website activated. Monitoring will start on the next check." };
+
+      const summary = output?.noticeFound ? `Initial notice found: ${output.summary}` : "Website activated. Monitoring will start on the next check.";
+      return { changed: output?.noticeFound || false, summary: summary };
     }
 
     if (website.lastContent && website.lastContent !== newContent) {
@@ -148,6 +192,7 @@ export const monitorAllWebsites = ai.defineFlow(
     console.log(`Found ${websitesToCheck.length} websites to monitor.`);
 
     for (const website of websitesToCheck) {
+        // Always process inactive websites to get their initial state
         if (website.status === 'inactive') {
             await processWebsite(website, telegramSettings);
             continue;
@@ -156,6 +201,7 @@ export const monitorAllWebsites = ai.defineFlow(
         const lastCheckedTime = website.lastChecked.toDate().getTime();
         const intervalMillis = website.checkInterval * 60 * 1000;
         
+        // Check if the interval has passed
         if (now.getTime() - lastCheckedTime >= intervalMillis) {
             await processWebsite(website, telegramSettings);
         }
