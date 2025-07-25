@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview This flow monitors websites for content changes and sends notifications to Telegram.
@@ -225,24 +226,24 @@ export const monitorAllWebsites = ai.defineFlow(
     console.log(`Found ${websitesToCheck.length} websites to monitor.`);
 
     for (const website of websitesToCheck) {
-        // Always process inactive websites to get their initial state
-        if (website.status === 'inactive') {
-            console.log(`Processing inactive website: ${website.label}`);
-            await processWebsite(website, telegramSettings as TelegramSettings);
-            continue;
-        }
-
-        const lastCheckedTime = website.lastChecked.toDate().getTime();
-        const intervalMillis = website.checkInterval * 60 * 1000;
-        
-        // Check if the interval has passed
-        if (now.getTime() - lastCheckedTime >= intervalMillis) {
-            console.log(`Processing website due for check: ${website.label}`);
-            await processWebsite(website, telegramSettings as TelegramSettings);
-        } else {
-            // Optional: log sites that are not yet due
-            // console.log(`Skipping website (not due yet): ${website.label}`);
-        }
+      // Always process inactive websites to get their initial state
+      if (website.status === 'inactive') {
+          console.log(`Processing inactive website: ${website.label}`);
+          await processWebsite(website, telegramSettings as TelegramSettings);
+          continue;
+      }
+  
+      const lastCheckedTime = website.lastChecked.toDate().getTime();
+      const intervalMillis = website.checkInterval * 60 * 1000;
+      
+      // Check if the interval has passed
+      if (now.getTime() - lastCheckedTime >= intervalMillis) {
+          console.log(`Processing website due for check: ${website.label}`);
+          await processWebsite(website, telegramSettings as TelegramSettings);
+      } else {
+          // Optional: log sites that are not yet due
+          // console.log(`Skipping website (not due yet): ${website.label}`);
+      }
     }
     console.log('Website monitoring flow finished.');
   }
