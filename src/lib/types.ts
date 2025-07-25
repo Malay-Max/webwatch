@@ -10,4 +10,5 @@ export type Website = {
   lastContent: string;
   lastUpdated: Timestamp;
   selector?: string; // Optional CSS selector
+  lastChangeSummary?: string;
 };

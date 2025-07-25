@@ -186,7 +186,7 @@ export function Dashboard() {
           selector: values.selector || '',
         };
         await updateWebsite(editingWebsite.id, updatedWebsiteData);
-        setWebsites(websites.map(w => w.id === editingWebsite.id ? { ...w, ...updatedWebsiteData } as Website : w));
+        await fetchWebsites();
         toast({ title: "Website Updated", description: "Your website settings have been saved." });
       } else {
         const newWebsiteData: Omit<Website, 'id'> = {
@@ -198,6 +198,7 @@ export function Dashboard() {
           status: 'inactive' as const,
           lastContent: '',
           selector: values.selector || '',
+          lastChangeSummary: '',
         };
         const newId = await addWebsite(newWebsiteData);
         const newWebsite = { ...newWebsiteData, id: newId };
@@ -246,8 +247,9 @@ export function Dashboard() {
               <TableRow>
                 <TableHead>Website</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="hidden md:table-cell">Interval</TableHead>
+                <TableHead className="hidden lg:table-cell">Interval</TableHead>
                 <TableHead className="hidden md:table-cell">Last Checked</TableHead>
+                <TableHead className="hidden lg:table-cell">Latest Update</TableHead>
                 <TableHead>
                   <span className="sr-only">Actions</span>
                 </TableHead>
@@ -268,9 +270,12 @@ export function Dashboard() {
                         <span>{statusConfig[website.status]?.label}</span>
                       </Badge>
                     </TableCell>
-                    <TableCell className="hidden md:table-cell">{website.checkInterval} mins</TableCell>
+                    <TableCell className="hidden lg:table-cell">{website.checkInterval} mins</TableCell>
                     <TableCell className="hidden md:table-cell">
                       {website.lastChecked && website.lastChecked.toMillis() > 0 ? formatDistanceToNow(website.lastChecked.toDate(), { addSuffix: true }) : 'Never'}
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell text-sm text-muted-foreground truncate max-w-[200px]">
+                      {website.lastChangeSummary || 'No changes yet.'}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
@@ -297,7 +302,7 @@ export function Dashboard() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
+                  <TableCell colSpan={6} className="h-24 text-center">
                     No websites added yet.
                   </TableCell>
                 </TableRow>

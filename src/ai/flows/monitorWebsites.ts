@@ -149,6 +149,8 @@ async function processWebsite(website: Website, telegramSettings: TelegramSettin
         url: website.url,
         content: newContent.substring(0, 5000),
       });
+      
+      const summary = output?.noticeFound ? `Initial notice found: ${output.summary}` : "Website activated. Monitoring will start on the next check.";
 
       if (output?.noticeFound && output.summary) {
         const message = `*Latest Notice on ${website.label}*\n\n${output.summary}\n\n[View Website](${website.url})`;
@@ -160,9 +162,9 @@ async function processWebsite(website: Website, telegramSettings: TelegramSettin
         lastChecked: now,
         status: 'active',
         lastUpdated: now,
+        lastChangeSummary: output?.summary || 'No changes detected on first check.',
       });
 
-      const summary = output?.noticeFound ? `Initial notice found: ${output.summary}` : "Website activated. Monitoring will start on the next check.";
       return { changed: output?.noticeFound || false, summary: summary };
     }
 
@@ -181,6 +183,7 @@ async function processWebsite(website: Website, telegramSettings: TelegramSettin
           lastChecked: now,
           lastUpdated: now,
           status: 'active',
+          lastChangeSummary: output.summary,
         });
         return { changed: true, summary: output.summary };
       } else {
