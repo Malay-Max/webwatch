@@ -125,10 +125,15 @@ async function sendTelegramNotification(botToken: string, chatId: string, text: 
 async function processWebsite(website: Website, telegramSettings: TelegramSettings): Promise<{ changed: boolean, summary?: string, content?: string }> {
   try {
     const response = await fetch(website.url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)' }
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Connection': 'keep-alive',
+        }
     });
     if (!response.ok) {
-      throw new Error(`Failed to fetch ${website.url}: ${response.statusText}`);
+      throw new Error(`Failed to fetch ${website.url}: ${response.status} ${response.statusText}`);
     }
     const rawHtml = await response.text();
     const newContent = extractContentBySelector(rawHtml, website.selector || '');
