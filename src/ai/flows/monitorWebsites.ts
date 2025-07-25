@@ -128,7 +128,7 @@ async function sendTelegramNotification(botToken: string, chatId: string, text: 
   }
 }
 
-async function processWebsite(website: Website, telegramSettings: TelegramSettings): Promise<{ changed: boolean, summary?: string, content?: string }> {
+async function processWebsite(website: Website, telegramSettings: TelegramSettings): Promise<{ changed: boolean, summary?: string }> {
   try {
     const response = await fetch(website.url, {
         headers: {
@@ -171,7 +171,7 @@ async function processWebsite(website: Website, telegramSettings: TelegramSettin
       
       await updateWebsite(website.id, updatePayload);
 
-      return { changed: output?.noticeFound || false, summary: summary, content: newContent };
+      return { changed: output?.noticeFound || false, summary: summary };
     }
 
     if (website.lastContent && website.lastContent !== newContent) {
@@ -191,14 +191,14 @@ async function processWebsite(website: Website, telegramSettings: TelegramSettin
           status: 'active',
           lastChangeSummary: output.summary,
         });
-        return { changed: true, summary: output.summary, content: newContent };
+        return { changed: true, summary: output.summary };
       } else {
         await updateWebsite(website.id, { lastChecked: now, status: 'active' });
-        return { changed: false, summary: 'No changes detected.', content: newContent };
+        return { changed: false, summary: 'No changes detected.' };
       }
     } else { // No change, just update the last checked time
         await updateWebsite(website.id, { lastChecked: now });
-        return { changed: false, summary: 'No changes detected.', content: newContent };
+        return { changed: false, summary: 'No changes detected.' };
     }
   } catch (error) {
     console.error(`Error processing ${website.url}:`, error);
@@ -256,7 +256,7 @@ export const monitorAllWebsites = ai.defineFlow(
 );
 
 
-export async function monitorSingleWebsite(websiteId: string): Promise<{ changed: boolean, summary?: string, content?: string }> {
+export async function monitorSingleWebsite(websiteId: string): Promise<{ changed: boolean, summary?: string }> {
     const website = await getWebsite(websiteId);
     if (!website) {
         throw new Error('Website not found');

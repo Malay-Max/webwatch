@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from 'react';
@@ -41,15 +42,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -73,7 +65,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { addWebsite, deleteWebsite, getWebsites, updateWebsite } from '@/lib/firestore';
@@ -110,7 +101,6 @@ export function Dashboard() {
   const [websites, setWebsites] = useState<Website[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingWebsite, setEditingWebsite] = useState<Website | null>(null);
-  const [debugContent, setDebugContent] = useState<string | null>(null);
   const { toast } = useToast();
 
   const fetchWebsites = async () => {
@@ -166,10 +156,6 @@ export function Dashboard() {
       const result = await monitorSingleWebsite(website.id);
       await fetchWebsites(); // Refresh the list to show updated status/time
       
-      if (result.content) {
-        setDebugContent(result.content);
-      }
-
       if (result.changed) {
         toast({
           title: "New Notice Found!",
@@ -415,25 +401,6 @@ export function Dashboard() {
           </DialogContent>
         </Dialog>
       </Card>
-      
-      <AlertDialog open={!!debugContent} onOpenChange={(open) => !open && setDebugContent(null)}>
-        <AlertDialogContent className="max-w-3xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Debug: Fetched Content</AlertDialogTitle>
-            <AlertDialogDescription>
-              This is the specific HTML content that was fetched and sent to the AI for analysis.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <ScrollArea className="h-96 w-full rounded-md border p-4">
-            <pre className="text-xs whitespace-pre-wrap break-all">
-                {debugContent}
-            </pre>
-          </ScrollArea>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setDebugContent(null)}>Close</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }
