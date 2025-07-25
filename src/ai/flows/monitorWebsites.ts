@@ -10,6 +10,7 @@ import { getTelegramSettings, getWebsite, getWebsitesToMonitor, updateWebsite } 
 import { Website } from '@/lib/types';
 import { Timestamp } from 'firebase/firestore';
 import { z } from 'zod';
+import { parse } from 'node-html-parser';
 
 type TelegramSettings = {
     botToken: string;
@@ -84,27 +85,17 @@ Content:
 });
 
 function extractContentBySelector(html: string, selector: string): string {
-    // Basic regex for a specific tag or a class/id.
-    // This is a simplified approach and won't handle complex nested structures
-    // or advanced CSS selectors as a full DOM parser would.
-    const sanitizedSelector = selector.trim();
-    let regex;
-
-    if (sanitizedSelector.startsWith('.')) {
-        // Class selector
-        const className = sanitizedSelector.substring(1);
-        regex = new RegExp(`<[^>]+class="[^"]*${className}[^"]*"[^>]*>([\\s\\S]*?)<\\/[^>]+>`, 'i');
-    } else if (sanitizedSelector.startsWith('#')) {
-        // ID selector
-        const id = sanitizedSelector.substring(1);
-        regex = new RegExp(`<[^>]+id="${id}"[^>]*>([\\s\\S]*?)<\\/[^>]+>`, 'i');
-    } else {
-        // Tag selector
-        regex = new RegExp(`<${sanitizedSelector}[^>]*>([\\s\\S]*?)<\\/${sanitizedSelector}>`, 'i');
+    if (!selector) {
+        return html;
     }
-
-    const match = html.match(regex);
-    return match ? match[1] || match[0] : html; // Return content or the full tag, fallback to full html
+    try {
+        const root = parse(html);
+        const element = root.querySelector(selector);
+        return element ? element.innerHTML : html; // Fallback to full html if selector not found
+    } catch (error) {
+        console.error(`Error parsing HTML for selector "${selector}":`, error);
+        return html; // Fallback on error
+    }
 }
 
 
@@ -140,14 +131,14 @@ async function processWebsite(website: Website, telegramSettings: TelegramSettin
       throw new Error(`Failed to fetch ${website.url}: ${response.statusText}`);
     }
     const rawHtml = await response.text();
-    const newContent = website.selector ? extractContentBySelector(rawHtml, website.selector) : rawHtml;
+    const newContent = extractContentBySelector(rawHtml, website.selector || '');
     const now = Timestamp.now();
 
     if (website.status === 'inactive' || !website.lastContent) {
       // First time checking this website
       const { output } = await initialNoticePrompt({
         url: website.url,
-        content: newContent.substring(0, 5000),
+        content: newContent.substring(0, 8000), // Increased substring limit
       });
       
       const summary = output?.noticeFound ? `Initial notice found: ${output.summary}` : "Website activated. Monitoring will start on the next check.";
@@ -174,8 +165,8 @@ async function processWebsite(website: Website, telegramSettings: TelegramSettin
     if (website.lastContent && website.lastContent !== newContent) {
       const { output } = await changeDetectionPrompt({
         url: website.url,
-        oldContent: website.lastContent.substring(0, 5000),
-        newContent: newContent.substring(0, 5000),
+        oldContent: website.lastContent.substring(0, 8000),
+        newContent: newContent.substring(0, 8000),
       });
 
       if (output?.changeDetected && output.summary) {
