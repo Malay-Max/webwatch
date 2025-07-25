@@ -128,7 +128,7 @@ export const monitorAllWebsites = ai.defineFlow(
   async () => {
     console.log('Starting website monitoring flow...');
     const now = new Date();
-    const websitesToCheck = await getWebsitesToMonitor(new Date()); 
+    const websitesToCheck = await getWebsitesToMonitor(now); 
     const telegramSettings = await getTelegramSettings();
     
     if (!telegramSettings || !telegramSettings.botToken || !telegramSettings.chatId) {
